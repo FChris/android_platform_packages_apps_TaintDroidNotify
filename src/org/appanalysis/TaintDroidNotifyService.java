@@ -47,6 +47,7 @@ public class TaintDroidNotifyService extends Service {
         ttable.put(new Integer(0x00002000), "Device serial number");
         ttable.put(new Integer(0x00004000), "User account information");
         ttable.put(new Integer(0x00008000), "browser history");
+        ttable.put(new Integer(0x00010000), "Generic GPIO Access");
     }
 
     private volatile static boolean isRunning = false;
@@ -173,7 +174,7 @@ public class TaintDroidNotifyService extends Service {
             ArrayList<String> list = new ArrayList<String>();
             int t;
             String tag;
-            
+
             // check each bit
             for (int i=0; i<32; i++) {
             	t = (taint>>i) & 0x1;
@@ -252,14 +253,14 @@ public class TaintDroidNotifyService extends Service {
         // covers "libcore.os.send" and "libcore.os.sendto"
         return msg.contains("libcore.os.send");
     }
-    
+
     private boolean isTaintedSSLSend(String msg) {
     	return msg.contains("SSLOutputStream.write");
     }
 
     private void processLogEntry(LogEntry le) {
 		String timestamp = le.getTimestamp();
-		String msg = le.getMessage(); 
+		String msg = le.getMessage();
         boolean taintedSend = isTaintedSend(msg);
         boolean taintedSSLSend = isTaintedSSLSend(msg);
         if(taintedSend || taintedSSLSend) {
