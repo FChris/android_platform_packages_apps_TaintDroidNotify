@@ -46,6 +46,7 @@ public class TaintDroidNotifyService extends Service {
         ttable.put(new Integer(0x00002000), "Device serial number");
         ttable.put(new Integer(0x00004000), "User account information");
         ttable.put(new Integer(0x00008000), "browser history");
+        ttable.put(new Integer(0x00010000), "gen gpio");
     }
 
     private volatile static boolean isRunning = false;
@@ -56,7 +57,7 @@ public class TaintDroidNotifyService extends Service {
     public static final String KEY_DATA = "KEY_DATA";
     public static final String KEY_ID = "KEY_ID";
     public static final String KEY_TIMESTAMP = "KEY_TIMESTAMP";
-    
+
     private BlockingQueue logQueue;
     private static final int LOGQUEUE_MAXSIZE = 4096;
 
@@ -147,7 +148,7 @@ public class TaintDroidNotifyService extends Service {
             return null;
         }
     }
-    
+
     private String get_smsapp(String msg) {
     	Pattern p = Pattern.compile("from app ((\\S)*) ");
         Matcher m = p.matcher(msg);
@@ -186,7 +187,7 @@ public class TaintDroidNotifyService extends Service {
             ArrayList<String> list = new ArrayList<String>();
             int t;
             String tag;
-            
+
             // check each bit
             for (int i=0; i<32; i++) {
             	t = (taint>>i) & 0x1;
@@ -222,7 +223,7 @@ public class TaintDroidNotifyService extends Service {
         int start = msg.indexOf(dataPrefix) + dataPrefix.length();
         return msg.substring(start);
     }
-    
+
     private int noti_id = 0;
 
     private void sendTaintDroidNotification(int id, String dest, String taint, String appname, String data, String timestamp) {
@@ -266,11 +267,11 @@ public class TaintDroidNotifyService extends Service {
         // covers "libcore.os.send" and "libcore.os.sendto"
         return msg.contains("libcore.os.send");
     }
-    
+
     private boolean isTaintedSSLSend(String msg) {
     	return msg.contains("SSLOutputStream.write");
     }
-    
+
     private boolean isTaintedSMS(String msg) {
         return msg.contains("GsmSMSDispatcher.sendSMS") || msg.contains("CdmaSMSDispatcher.sendSMS");
     }
@@ -278,15 +279,15 @@ public class TaintDroidNotifyService extends Service {
     private void processLogEntry(LogEntry le) {
         String timestamp = le.getTimestamp();
         String msg = le.getMessage();
-        
+
         boolean doNotify = false;
-        
+
         boolean taintedSend = isTaintedSend(msg);
         boolean taintedSSLSend = isTaintedSSLSend(msg);
         boolean taintedSMS = isTaintedSMS(msg);
-        
+
         String dest="", taint="", app="", data="";
-        
+
         if (taintedSend || taintedSSLSend) {
             dest = get_dest(msg);
             taint = get_taint(msg);
@@ -303,7 +304,7 @@ public class TaintDroidNotifyService extends Service {
             data = get_data(msg);
             doNotify = true;
         }
-        
+
         if (doNotify) {
             // only send notification if recent (within last 5 seconds)
             SimpleDateFormat format = new SimpleDateFormat("MM-dd HH:mm:ss.SSS");
@@ -316,7 +317,7 @@ public class TaintDroidNotifyService extends Service {
                 Log.e(TAG, "Error parsing data from log entry");
             }
             long diffSec = TimeUnit.MILLISECONDS.toSeconds(now.getTime()-logDate.getTime());
-            
+
             if (diffSec<5)
                 sendTaintDroidNotification(le.hashCode(), dest, taint, app, data, timestamp);
         }
@@ -386,7 +387,7 @@ public class TaintDroidNotifyService extends Service {
         this.captureThread.interrupt();
         this.readThread = null;
         this.captureThread = null;
-        
+
         isRunning = false;
     }
 }
